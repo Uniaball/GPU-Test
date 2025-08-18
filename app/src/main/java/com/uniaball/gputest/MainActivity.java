@@ -76,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
                 final boolean vulkanSupported = VulkanUtils.isSupported(MainActivity.this);
                 
                 runOnUiThread(() -> {
-                    gpuInfoText.setText(String.format("GPU: %s\nOpenGL: %s\nVulkan: %s",
+                    gpuInfoText.setText(String.format("GPU: %s\nOpenGL: %s\nVulkan 1.1: %s",
                     gpu, glVersion, vulkanSupported ? "支持" : "不支持"));
                     
                     if (glSurfaceView.getParent() != null) {
@@ -112,8 +112,11 @@ public class MainActivity extends AppCompatActivity {
     }
     
     private void showVulkanTest() {
-        Toast.makeText(this,
-        VulkanUtils.isSupported(this) ? "支持Vulkan 1.1" : "不支持Vulkan 1.1",
-        Toast.LENGTH_SHORT).show();
+        boolean supported = VulkanUtils.isSupportedVulkan12(this);
+        String message = supported ? 
+            "支持 Vulkan 1.2" : 
+            "不支持 Vulkan 1.2";
+        
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 }

@@ -5,8 +5,8 @@
     <string name="countdown_ready">准备开始测试...</string>
     <string name="app_name">GPU Test</string>
     <string name="gl_test_btn">OpenGL ES测试</string>
-    <string name="vulkan_test_btn">检测Vulkan 1.1支持</string>
-    <string name="version_info">Version 1.5.1 | Made by Uniaball</string>
+    <string name="vulkan_test_btn">检测Vulkan 1.2支持</string>
+    <string name="version_info">Version 1.5.2 | Made by Uniaball</string>
     
     <!-- 设置页面字符串 -->
     <string name="settings_title">设置</string>

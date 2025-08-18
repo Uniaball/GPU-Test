@@ -7,9 +7,18 @@ import android.os.Build;
 public class VulkanUtils {
     public static boolean isSupported(Activity activity) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            // 使用正确的 Vulkan 检测标志
             return activity.getPackageManager().hasSystemFeature(
                 PackageManager.FEATURE_VULKAN_HARDWARE_LEVEL
+            );
+        }
+        return false;
+    }
+    
+    public static boolean isSupportedVulkan12(Activity activity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            return activity.getPackageManager().hasSystemFeature(
+                PackageManager.FEATURE_VULKAN_HARDWARE_LEVEL,
+                2
             );
         }
         return false;

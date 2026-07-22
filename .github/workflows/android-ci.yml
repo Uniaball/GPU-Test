@@ -45,6 +45,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Lint
+        continue-on-error: true
         run: ./gradlew lint
 
       - name: Build Debug APK

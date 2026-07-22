@@ -45,36 +45,22 @@ jobs:
         run: chmod +x gradlew
 
       - name: Lint
-        continue-on-error: true
         run: ./gradlew lint
 
       - name: Build Debug APK
         id: build
-        continue-on-error: true
-        run: |
-          ./gradlew assembleDebug --stacktrace 2>&1 | tee build-output.txt
-          echo "EXIT_CODE=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+        run: ./gradlew assembleDebug
 
       - name: Build Release APK
-        if: steps.build.outcome == 'success'
         run: ./gradlew assembleRelease
 
-      - name: Upload Build Log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-output
-          path: build-output.txt
-
       - name: Upload Debug APK
-        if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload Release APK
-        if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: release-apk

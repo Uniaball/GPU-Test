@@ -42,10 +42,6 @@ android {
         viewBinding = true
     }
 
-    lint {
-        isAbortOnError = false
-        isCheckReleaseBuilds = false
-    }
 }
 
 dependencies {

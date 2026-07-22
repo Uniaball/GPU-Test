@@ -10,7 +10,6 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.EdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.appbar.MaterialToolbar
 import javax.microedition.khronos.egl.EGLConfig
@@ -25,10 +24,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        EdgeToEdge.enable(this)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.setNavigationBarContrastEnforced(false)
-        }
 
         toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)

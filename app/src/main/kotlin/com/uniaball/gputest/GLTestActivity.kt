@@ -13,7 +13,6 @@ import android.view.animation.AlphaAnimation
 import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.EdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.card.MaterialCardView
 import java.nio.ByteBuffer
@@ -50,10 +49,6 @@ class GLTestActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_gltest)
-        EdgeToEdge.enable(this)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.setNavigationBarContrastEnforced(false)
-        }
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 

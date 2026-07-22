@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.EdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.slider.Slider
@@ -34,10 +33,7 @@ class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        EdgeToEdge.enable(this)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.setNavigationBarContrastEnforced(false)
-        }
+
 
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)

@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -42,7 +43,6 @@ class MainActivity : AppCompatActivity() {
                 )
             )
             title = "GPU Test"
-            titleCentered = true
             inflateMenu(R.menu.main_menu)
         }
         setSupportActionBar(toolbar)

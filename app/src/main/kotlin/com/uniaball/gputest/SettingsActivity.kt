@@ -3,6 +3,8 @@ package com.uniaball.gputest
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -147,7 +149,7 @@ class SettingsActivity : AppCompatActivity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
             text = "注意：增加球体数量将显著提高GPU负载"
-            setTextColor(getColor(com.google.android.material.R.color.material_error))
+            setTextColor(getColor(android.R.color.holo_red_dark))
             setPadding(dp(16), dp(16), dp(16), dp(16))
             textSize = 14f
         }

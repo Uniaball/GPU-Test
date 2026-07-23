@@ -3,6 +3,7 @@ package com.uniaball.gputest
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -135,7 +136,9 @@ class SettingsActivity : AppCompatActivity() {
             )
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(16), dp(16), dp(16))
-            setBackgroundResource(android.R.attr.selectableItemBackground)
+            val tv = TypedValue()
+            theme.resolveAttribute(android.R.attr.selectableItemBackground, tv, true)
+            setBackgroundResource(tv.resourceId)
             elevation = 1f
             addView(titleText)
             addView(countRow)

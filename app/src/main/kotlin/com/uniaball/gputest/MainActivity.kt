@@ -1,13 +1,9 @@
 package com.uniaball.gputest
 
-import android.app.AlertDialog
 import android.content.Intent
-import android.graphics.Typeface
 import android.opengl.GLSurfaceView
 import android.os.Bundle
 import android.view.Gravity
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -15,8 +11,6 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.coordinatorlayout.widget.CoordinatorLayout
-import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
@@ -28,32 +22,26 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var gpuInfoText: TextView
     private var glSurfaceView: GLSurfaceView? = null
-    private lateinit var toolbar: MaterialToolbar
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        toolbar = MaterialToolbar(this).apply {
+        // Toolbar
+        val toolbar = MaterialToolbar(this).apply {
             id = View.generateViewId()
-            layoutParams = AppBarLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                resources.getDimensionPixelSize(
-                    resources.getIdentifier("actionBarSize", "dimen", "android")
-                )
-            )
-            title = "GPU Test"
-            inflateMenu(R.menu.main_menu)
-        }
-        setSupportActionBar(toolbar)
-
-        val appBarLayout = AppBarLayout(this).apply {
-            layoutParams = CoordinatorLayout.LayoutParams(
+            layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
-            fitsSystemWindows = true
-            addView(toolbar)
+            title = "GPU Test"
+            inflateMenu(R.menu.main_menu)
+            setOnMenuItemClickListener { item ->
+                if (item.itemId == R.id.action_settings) {
+                    startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
+                    true
+                } else false
+            }
         }
 
         // Info card
@@ -64,7 +52,8 @@ class MainActivity : AppCompatActivity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
             text = getString(R.string.loading)
-            setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium)
+            textSize = 14f
+            setLineSpacing(dp(4).toFloat(), 1f)
         }
 
         val cardInner = LinearLayout(this).apply {
@@ -83,12 +72,11 @@ class MainActivity : AppCompatActivity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
             radius = dp(12).toFloat()
-            strokeColor = getColor(com.google.android.material.R.color.material_on_surface_emphasis_medium)
             strokeWidth = 1
             addView(cardInner)
         }
 
-        // Buttons
+        // OpenGL ES test button
         val glTestBtn = MaterialButton(this).apply {
             id = View.generateViewId()
             layoutParams = LinearLayout.LayoutParams(
@@ -100,6 +88,7 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { startGLTest() }
         }
 
+        // Vulkan detect button
         val vulkanDetectBtn = MaterialButton(this).apply {
             id = View.generateViewId()
             layoutParams = LinearLayout.LayoutParams(
@@ -121,16 +110,14 @@ class MainActivity : AppCompatActivity() {
                 gravity = Gravity.CENTER_HORIZONTAL
             }
             text = getString(R.string.version_info)
-            setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodySmall)
+            textSize = 12f
         }
 
-        val mainContent = LinearLayout(this).apply {
-            layoutParams = CoordinatorLayout.LayoutParams(
+        val contentLayout = LinearLayout(this).apply {
+            layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            ).apply {
-                behavior = com.google.android.material.appbar.AppBarLayout.ScrollingViewBehavior()
-            }
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
             orientation = LinearLayout.VERTICAL
             setPadding(dp(24), dp(24), dp(24), dp(24))
             addView(infoCard)
@@ -139,32 +126,19 @@ class MainActivity : AppCompatActivity() {
             addView(footer)
         }
 
-        val root = CoordinatorLayout(this).apply {
+        val root = LinearLayout(this).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            fitsSystemWindows = true
-            addView(appBarLayout)
-            addView(mainContent)
+            orientation = LinearLayout.VERTICAL
+            addView(toolbar)
+            addView(contentLayout)
         }
 
         setContentView(root)
 
         initGLInfoDetector()
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.main_menu, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == R.id.action_settings) {
-            startActivity(Intent(this, SettingsActivity::class.java))
-            return true
-        }
-        return super.onOptionsItemSelected(item)
     }
 
     private fun initGLInfoDetector() {

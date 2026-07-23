@@ -151,24 +151,6 @@ object VulkanUtils {
             sb.appendLine("Device ID: ${device.deviceID}")
             sb.appendLine()
 
-            sb.appendLine("队列族 (${device.queueFamilies.size}):")
-            for (qf in device.queueFamilies) {
-                sb.appendLine("  族${qf["index"]}: ${qf["flags"]} (${qf["count"]}个队列, ${qf["timestampValidBits"]}位时间戳)")
-            }
-            sb.appendLine()
-
-            sb.appendLine("内存堆 (${device.memoryHeaps.size}):")
-            for (mh in device.memoryHeaps) {
-                sb.appendLine("  堆${mh["index"]}: ${mh["size"]} [${mh["flags"]}]")
-            }
-            sb.appendLine()
-
-            sb.appendLine("内存类型 (${device.memoryTypes.size}):")
-            for (mt in device.memoryTypes) {
-                sb.appendLine("  类型${mt["index"]}: 堆${mt["heapIndex"]} [${mt["flags"]}]")
-            }
-            sb.appendLine()
-
             // Extensions - apply filter if present
             val exts = if (filter.isEmpty()) {
                 device.extensions

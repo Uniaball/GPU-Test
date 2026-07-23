@@ -3,11 +3,14 @@ package com.uniaball.gputest
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.slider.Slider
-import com.uniaball.gputest.databinding.ActivitySettingsBinding
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -27,32 +30,164 @@ class SettingsActivity : AppCompatActivity() {
         private fun clampValue(value: Int, min: Int, max: Int): Int = minOf(maxOf(value, min), max)
     }
 
-    private lateinit var binding: ActivitySettingsBinding
+    private lateinit var ballCountValue: TextView
+    private lateinit var ballCountSeekBar: Slider
     private var lastValidValue: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
+        val ballCountValue = TextView(this).apply {
+            id = View.generateViewId()
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+            gravity = android.view.Gravity.END
+            textSize = 16f
+        }
 
+        val ballCountLabel = TextView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            text = "球体数量"
+            textSize = 16f
+        }
 
-        binding = ActivitySettingsBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        this.ballCountValue = ballCountValue
+
+        val countRow = LinearLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            addView(ballCountLabel)
+            addView(ballCountValue)
+        }
+
+        val rangeMin = TextView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            text = "10,000"
+            textSize = 14f
+        }
+
+        val rangeSpacer = android.view.View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+
+        val rangeMax = TextView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            text = "500,000"
+            textSize = 14f
+        }
+
+        val rangeRow = LinearLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            orientation = LinearLayout.HORIZONTAL
+            addView(rangeMin)
+            addView(rangeSpacer)
+            addView(rangeMax)
+        }
+
+        ballCountSeekBar = Slider(this).apply {
+            id = View.generateViewId()
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val titleText = TextView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = dp(8) }
+            text = "GL ES测试设置"
+            textSize = 18f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        }
+
+        val settingsBlock = LinearLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+            setBackgroundResource(android.R.attr.selectableItemBackground)
+            elevation = 1f
+            addView(titleText)
+            addView(countRow)
+            addView(ballCountSeekBar)
+            addView(rangeRow)
+        }
+
+        val warningText = TextView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            text = "注意：增加球体数量将显著提高GPU负载"
+            setTextColor(getColor(com.google.android.material.R.color.material_error))
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+            textSize = 14f
+        }
+
+        val contentContainer = LinearLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            orientation = LinearLayout.VERTICAL
+            addView(settingsBlock)
+            addView(warningText)
+        }
+
+        val root = ScrollView(this).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            fitsSystemWindows = true
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+            addView(contentContainer)
+        }
+
+        setContentView(root)
 
         initSlider()
     }
 
     private fun initSlider() {
-        binding.ballCountSeekBar.valueFrom = MIN_BALL_COUNT.toFloat()
-        binding.ballCountSeekBar.valueTo = MAX_BALL_COUNT.toFloat()
-        binding.ballCountSeekBar.stepSize = 10000f
+        ballCountSeekBar.valueFrom = MIN_BALL_COUNT.toFloat()
+        ballCountSeekBar.valueTo = MAX_BALL_COUNT.toFloat()
+        ballCountSeekBar.stepSize = 10000f
 
         val initialValue = getSphereCount(this)
-        binding.ballCountSeekBar.value = initialValue.toFloat()
+        ballCountSeekBar.value = initialValue.toFloat()
         updateBallCountText(initialValue)
         lastValidValue = initialValue
 
-        binding.ballCountSeekBar.addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
+        ballCountSeekBar.addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
             override fun onStartTrackingTouch(slider: Slider) {}
 
             override fun onStopTrackingTouch(slider: Slider) {
@@ -65,7 +200,7 @@ class SettingsActivity : AppCompatActivity() {
             }
         })
 
-        binding.ballCountSeekBar.addOnChangeListener { _, value, fromUser ->
+        ballCountSeekBar.addOnChangeListener { _, value, fromUser ->
             if (fromUser) {
                 val intValue = value.toInt()
                 saveBallCountSetting(intValue)
@@ -75,7 +210,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun updateBallCountText(value: Int) {
-        binding.ballCountValue.text = String.format("%,d", value)
+        ballCountValue.text = String.format("%,d", value)
     }
 
     private fun showHighLoadWarningDialog(selectedCount: Int) {
@@ -97,7 +232,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun resetToDefaultValue() {
-        binding.ballCountSeekBar.value = DEFAULT_BALL_COUNT.toFloat()
+        ballCountSeekBar.value = DEFAULT_BALL_COUNT.toFloat()
         saveBallCountSetting(DEFAULT_BALL_COUNT)
         updateBallCountText(DEFAULT_BALL_COUNT)
         lastValidValue = DEFAULT_BALL_COUNT
@@ -109,4 +244,6 @@ class SettingsActivity : AppCompatActivity() {
         editor.putInt(KEY_BALL_COUNT, clampedValue)
         editor.apply()
     }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 }

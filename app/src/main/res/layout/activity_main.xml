@@ -60,12 +60,12 @@
             app:icon="@drawable/ic_opengl" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/vulkanTestBtn"
+            android:id="@+id/vulkanDetectBtn"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="@string/vulkan_test_btn"
+            android:text="@string/vulkan_detect_btn"
             app:icon="@drawable/ic_vulkan" />
 
         <!-- 页脚 -->

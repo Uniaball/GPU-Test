@@ -1,17 +1,25 @@
 package com.uniaball.gputest
 
+import android.app.AlertDialog
 import android.content.Intent
+import android.graphics.Typeface
 import android.opengl.GLSurfaceView
 import android.os.Bundle
+import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.ViewGroup
-import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.coordinatorlayout.widget.CoordinatorLayout
+import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
@@ -24,17 +32,124 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
 
-        toolbar = findViewById(R.id.toolbar)
+        toolbar = MaterialToolbar(this).apply {
+            id = View.generateViewId()
+            layoutParams = AppBarLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                resources.getDimensionPixelSize(
+                    resources.getIdentifier("actionBarSize", "dimen", "android")
+                )
+            )
+            title = "GPU Test"
+            titleCentered = true
+            inflateMenu(R.menu.main_menu)
+        }
         setSupportActionBar(toolbar)
 
-        val glTestBtn = findViewById<Button>(R.id.glTestBtn)
-        val vulkanTestBtn = findViewById<Button>(R.id.vulkanTestBtn)
-        gpuInfoText = findViewById(R.id.gpuInfoText)
+        val appBarLayout = AppBarLayout(this).apply {
+            layoutParams = CoordinatorLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            fitsSystemWindows = true
+            addView(toolbar)
+        }
 
-        glTestBtn.setOnClickListener { startGLTest() }
-        vulkanTestBtn.setOnClickListener { showVulkanTest() }
+        // Info card
+        gpuInfoText = TextView(this).apply {
+            id = View.generateViewId()
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            text = getString(R.string.loading)
+            setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium)
+        }
+
+        val cardInner = LinearLayout(this).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+            addView(gpuInfoText)
+        }
+
+        val infoCard = MaterialCardView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            radius = dp(12).toFloat()
+            strokeColor = getColor(com.google.android.material.R.color.material_on_surface_emphasis_medium)
+            strokeWidth = 1
+            addView(cardInner)
+        }
+
+        // Buttons
+        val glTestBtn = MaterialButton(this).apply {
+            id = View.generateViewId()
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(24) }
+            text = getString(R.string.gl_test_btn)
+            icon = getDrawable(R.drawable.ic_opengl)
+            setOnClickListener { startGLTest() }
+        }
+
+        val vulkanDetectBtn = MaterialButton(this).apply {
+            id = View.generateViewId()
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(16) }
+            text = getString(R.string.vulkan_detect_btn)
+            icon = getDrawable(R.drawable.ic_vulkan)
+            setOnClickListener { showVulkanDetail() }
+        }
+
+        // Footer
+        val footer = TextView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dp(32)
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
+            text = getString(R.string.version_info)
+            setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodySmall)
+        }
+
+        val mainContent = LinearLayout(this).apply {
+            layoutParams = CoordinatorLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            ).apply {
+                behavior = com.google.android.material.appbar.AppBarLayout.ScrollingViewBehavior()
+            }
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(24), dp(24), dp(24), dp(24))
+            addView(infoCard)
+            addView(glTestBtn)
+            addView(vulkanDetectBtn)
+            addView(footer)
+        }
+
+        val root = CoordinatorLayout(this).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            fitsSystemWindows = true
+            addView(appBarLayout)
+            addView(mainContent)
+        }
+
+        setContentView(root)
 
         initGLInfoDetector()
     }
@@ -45,8 +160,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        val id = item.itemId
-        if (id == R.id.action_settings) {
+        if (item.itemId == R.id.action_settings) {
             startActivity(Intent(this, SettingsActivity::class.java))
             return true
         }
@@ -61,12 +175,11 @@ class MainActivity : AppCompatActivity() {
             override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
                 val gpu = GLES32Utils.getGPUInfo()
                 val glVersion = GLES32Utils.getGLVersion()
-                val vulkanSupported = VulkanUtils.isSupported(this@MainActivity)
 
                 runOnUiThread {
                     gpuInfoText.text = String.format(
-                        "GPU: %s\nOpenGL: %s\nVulkan 1.1: %s",
-                        gpu, glVersion, if (vulkanSupported) "支持" else "不支持"
+                        "GPU: %s\nOpenGL: %s",
+                        gpu, glVersion
                     )
 
                     if (view.parent != null) {
@@ -96,9 +209,40 @@ class MainActivity : AppCompatActivity() {
         startActivity(Intent(this, GLTestActivity::class.java))
     }
 
-    private fun showVulkanTest() {
-        val supported = VulkanUtils.isSupportedVulkan12(this)
-        val message = if (supported) "支持 Vulkan 1.2" else "不支持 Vulkan 1.2"
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    private fun showVulkanDetail() {
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle("正在检测 Vulkan...")
+            .setMessage("请稍候...")
+            .setCancelable(false)
+            .create()
+        dialog.show()
+
+        Thread {
+            val info = VulkanUtils.getVulkanInfo()
+            val detailText = VulkanUtils.buildDetailText(info)
+
+            runOnUiThread {
+                dialog.dismiss()
+
+                val scrollView = ScrollView(this).apply {
+                    setPadding(dp(48), dp(32), dp(48), dp(32))
+                    addView(TextView(this@MainActivity).apply {
+                        text = detailText
+                        textSize = 13f
+                        setLineSpacing(dp(4).toFloat(), 1f)
+                    })
+                }
+
+                val title = if (info.supported) "Vulkan 详细信息" else "Vulkan 不可用"
+
+                MaterialAlertDialogBuilder(this@MainActivity)
+                    .setTitle(title)
+                    .setView(scrollView)
+                    .setPositiveButton("关闭", null)
+                    .show()
+            }
+        }.start()
     }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 }

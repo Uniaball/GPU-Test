@@ -3,14 +3,16 @@ package com.uniaball.gputest
 import android.opengl.GLES32
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.Gravity
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.animation.AlphaAnimation
 import android.widget.FrameLayout
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -50,42 +52,130 @@ class GLTestActivity : AppCompatActivity() {
     private var sphereCount: Int = 0
     private var sphereRenderer: SphereRenderer? = null
 
-    private val Int.dpToPx: Int
-        get() = (this * resources.displayMetrics.density).toInt()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_gltest)
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        val container = findViewById<FrameLayout>(R.id.gl_container)
-        fpsTextView = findViewById(R.id.fpsTextView)
-        infoTextView = findViewById(R.id.infoTextView)
-        performanceTextView = findViewById(R.id.performanceTextView)
-        performanceCardView = findViewById(R.id.performanceCardView)
+        val glContainer = FrameLayout(this).apply {
+            id = View.generateViewId()
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        }
+
+        // FPS card - top overlay
+        fpsTextView = TextView(this).apply {
+            id = View.generateViewId()
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            text = "FPS: 0 | Time: 0s"
+            setTextAppearance(androidx.appcompat.R.style.TextAppearance_AppCompat_Body1)
+            setTextColor(0xFFFFFFFF.toInt())
+        }
+
+        infoTextView = TextView(this).apply {
+            id = View.generateViewId()
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(8) }
+            text = "大规模球体渲染测试 - 100,000个球体"
+            setTextAppearance(androidx.appcompat.R.style.TextAppearance_AppCompat_Caption)
+            setTextColor(0xB0FFFFFF.toInt())
+        }
+
+        val fpsCardInner = LinearLayout(this).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            orientation = LinearLayout.VERTICAL
+            addView(fpsTextView)
+            addView(infoTextView)
+        }
+
+        val fpsCardView = MaterialCardView(this).apply {
+            id = View.generateViewId()
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = Gravity.TOP
+                setMargins(dp(16), dp(16), dp(16), 0)
+            }
+            setCardBackgroundColor(0x801C1B1F.toInt())
+            radius = dp(12).toFloat()
+            setContentPadding(dp(16), dp(16), dp(16), dp(16))
+            addView(fpsCardInner)
+        }
+
+        // Performance card - bottom overlay, initially hidden
+        performanceTextView = TextView(this).apply {
+            id = View.generateViewId()
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            gravity = Gravity.CENTER
+            textSize = 18f
+            setTextColor(0xFFFFFFFF.toInt())
+            text = "性能评级结果将在此显示"
+        }
+
+        performanceCardView = MaterialCardView(this).apply {
+            id = View.generateViewId()
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = Gravity.BOTTOM
+                setMargins(dp(16), 0, dp(16), dp(16))
+            }
+            visibility = android.view.View.GONE
+            setCardBackgroundColor(0x8032214A.toInt())
+            radius = dp(12).toFloat()
+            setContentPadding(dp(16), dp(16), dp(16), dp(16))
+            addView(performanceTextView)
+        }
 
         // Adjust overlay card margins to account for system bar insets
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.fpsCardView)) { view, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(fpsCardView) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.updateLayoutParams<FrameLayout.LayoutParams> {
-                topMargin = systemBars.top + 16.dpToPx
-                leftMargin = 16.dpToPx
-                rightMargin = 16.dpToPx
+                topMargin = systemBars.top + dp(16)
+                leftMargin = dp(16)
+                rightMargin = dp(16)
             }
             insets
         }
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.performanceCardView)) { view, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(performanceCardView) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.updateLayoutParams<FrameLayout.LayoutParams> {
-                bottomMargin = systemBars.bottom + 16.dpToPx
-                leftMargin = 16.dpToPx
-                rightMargin = 16.dpToPx
+                bottomMargin = systemBars.bottom + dp(16)
+                leftMargin = dp(16)
+                rightMargin = dp(16)
             }
             insets
         }
+
+        val root = FrameLayout(this).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            setBackgroundColor(0xFF1C1B1F.toInt())
+            addView(glContainer)
+            addView(fpsCardView)
+            addView(performanceCardView)
+        }
+
+        setContentView(root)
 
         sphereCount = SettingsActivity.getSphereCount(this)
 
@@ -98,7 +188,7 @@ class GLTestActivity : AppCompatActivity() {
         view.setEGLConfigChooser(8, 8, 8, 8, 16, 8)
         sphereRenderer = SphereRenderer()
         view.setRenderer(sphereRenderer)
-        container.addView(view)
+        glContainer.addView(view)
 
         startTime = System.currentTimeMillis()
         startFPSCounter()
@@ -182,6 +272,8 @@ class GLTestActivity : AppCompatActivity() {
         lastTime = System.currentTimeMillis()
         frameCount = 0
     }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private inner class SphereRenderer : GLSurfaceView.Renderer {
         private var shaderProgram = 0

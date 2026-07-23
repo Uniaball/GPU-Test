@@ -1,8 +1,14 @@
 package com.uniaball.gputest
 
+import android.app.AlertDialog
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.Typeface
 import android.opengl.GLSurfaceView
+import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -11,6 +17,9 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
@@ -22,6 +31,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var gpuInfoText: TextView
     private var glSurfaceView: GLSurfaceView? = null
+    private val handler = Handler(Looper.getMainLooper())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -76,8 +86,8 @@ class MainActivity : AppCompatActivity() {
             addView(cardInner)
         }
 
-        // OpenGL ES test button
-        val glTestBtn = MaterialButton(this).apply {
+        // OpenGL ES test button (outlined)
+        val glTestBtn = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             id = View.generateViewId()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -88,8 +98,8 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { startGLTest() }
         }
 
-        // Vulkan detect button
-        val vulkanDetectBtn = MaterialButton(this).apply {
+        // Vulkan detect button (outlined)
+        val vulkanDetectBtn = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             id = View.generateViewId()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -119,7 +129,7 @@ class MainActivity : AppCompatActivity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(24), dp(24), dp(24), dp(24))
+            setPadding(dp(24), dp(16), dp(24), dp(24))
             addView(infoCard)
             addView(glTestBtn)
             addView(vulkanDetectBtn)
@@ -134,6 +144,13 @@ class MainActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             addView(toolbar)
             addView(contentLayout)
+        }
+
+        // Apply window insets to avoid status bar overlap
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updatePadding(top = systemBars.top)
+            insets
         }
 
         setContentView(root)
@@ -184,36 +201,80 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showVulkanDetail() {
-        val dialog = MaterialAlertDialogBuilder(this)
+        val loadingDialog = MaterialAlertDialogBuilder(this)
             .setTitle("正在检测 Vulkan...")
             .setMessage("请稍候...")
             .setCancelable(false)
             .create()
-        dialog.show()
+
+        try {
+            loadingDialog.show()
+        } catch (e: Exception) {
+            return
+        }
 
         Thread {
-            val info = VulkanUtils.getVulkanInfo()
-            val detailText = VulkanUtils.buildDetailText(info)
+            try {
+                // First check basic Vulkan support via PackageManager (fast, safe)
+                val basicSupport = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    packageManager.hasSystemFeature(PackageManager.FEATURE_VULKAN_HARDWARE_LEVEL)
+                } else false
 
-            runOnUiThread {
-                dialog.dismiss()
+                val basicSupport12 = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    packageManager.hasSystemFeature(PackageManager.FEATURE_VULKAN_HARDWARE_LEVEL, 2)
+                } else false
 
-                val scrollView = ScrollView(this).apply {
-                    setPadding(dp(48), dp(32), dp(48), dp(32))
-                    addView(TextView(this@MainActivity).apply {
-                        text = detailText
-                        textSize = 13f
-                        setLineSpacing(dp(4).toFloat(), 1f)
-                    })
+                // Try JNI for detailed info (may crash on some devices, catch what we can)
+                var detailText: String
+                try {
+                    val info = VulkanUtils.getVulkanInfo()
+                    detailText = VulkanUtils.buildDetailText(info)
+                } catch (e: Exception) {
+                    // JNI failed, build basic info from PackageManager
+                    val sb = StringBuilder()
+                    sb.appendLine("Vulkan 基础检测结果:")
+                    sb.appendLine()
+                    sb.appendLine("Vulkan 1.1 支持: ${if (basicSupport) "支持" else "不支持"}")
+                    sb.appendLine("Vulkan 1.2 支持: ${if (basicSupport12) "支持" else "不支持"}")
+                    if (!basicSupport) {
+                        sb.appendLine()
+                        sb.appendLine("详细硬件信息需要通过 JNI 获取，")
+                        sb.appendLine("但当前设备原生库加载失败。")
+                        sb.appendLine()
+                        sb.appendLine("错误: ${e.message}")
+                    }
+                    detailText = sb.toString()
                 }
 
-                val title = if (info.supported) "Vulkan 详细信息" else "Vulkan 不可用"
+                handler.post {
+                    try {
+                        loadingDialog.dismiss()
+                    } catch (_: Exception) {}
 
-                MaterialAlertDialogBuilder(this@MainActivity)
-                    .setTitle(title)
-                    .setView(scrollView)
-                    .setPositiveButton("关闭", null)
-                    .show()
+                    try {
+                        val scrollView = ScrollView(this).apply {
+                            setPadding(dp(48), dp(32), dp(48), dp(32))
+                            addView(TextView(this@MainActivity).apply {
+                                text = detailText
+                                textSize = 13f
+                                setLineSpacing(dp(4).toFloat(), 1f)
+                            })
+                        }
+
+                        val title = if (basicSupport || detailText.contains("\"supported\":true"))
+                            "Vulkan 详细信息" else "Vulkan 不可用"
+
+                        MaterialAlertDialogBuilder(this@MainActivity)
+                            .setTitle(title)
+                            .setView(scrollView)
+                            .setPositiveButton("关闭", null)
+                            .show()
+                    } catch (_: Exception) {}
+                }
+            } catch (_: Exception) {
+                handler.post {
+                    try { loadingDialog.dismiss() } catch (_: Exception) {}
+                }
             }
         }.start()
     }

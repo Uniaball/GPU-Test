@@ -1,6 +1,5 @@
 package com.uniaball.gputest
 
-import org.json.JSONArray
 import org.json.JSONObject
 
 object VulkanUtils {
@@ -124,8 +123,11 @@ object VulkanUtils {
         return VulkanInfo(true, null, apiVersion, devices)
     }
 
-    fun buildDetailText(info: VulkanInfo): String {
+    fun buildDetailText(info: VulkanInfo): String = buildDetailText(info, "")
+
+    fun buildDetailText(info: VulkanInfo, extensionFilter: String): String {
         val sb = StringBuilder()
+        val filter = extensionFilter.trim().lowercase()
 
         if (!info.supported) {
             sb.appendLine("Vulkan 不支持")
@@ -133,10 +135,6 @@ object VulkanUtils {
             sb.appendLine(info.error ?: "未知原因")
             return sb.toString()
         }
-
-        sb.appendLine("Vulkan API 版本: ${info.apiVersion}")
-        sb.appendLine("设备数量: ${info.devices.size}")
-        sb.appendLine()
 
         for ((di, device) in info.devices.withIndex()) {
             if (info.devices.size > 1) {
@@ -171,15 +169,15 @@ object VulkanUtils {
             }
             sb.appendLine()
 
-            sb.appendLine("扩展 (${device.extensions.size}):")
-            // Limit extensions displayed to avoid huge dialogs
-            val maxExts = 32
-            val shown = device.extensions.take(maxExts)
-            for (ext in shown) {
-                sb.appendLine("  $ext")
+            // Extensions - apply filter if present
+            val exts = if (filter.isEmpty()) {
+                device.extensions
+            } else {
+                device.extensions.filter { it.lowercase().contains(filter) }
             }
-            if (device.extensions.size > maxExts) {
-                sb.appendLine("  ...以及 ${device.extensions.size - maxExts} 个更多扩展")
+            sb.appendLine("扩展 (${exts.size}/${device.extensions.size}):")
+            for (ext in exts) {
+                sb.appendLine("  $ext")
             }
         }
 

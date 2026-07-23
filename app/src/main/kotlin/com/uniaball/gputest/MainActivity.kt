@@ -1,17 +1,19 @@
 package com.uniaball.gputest
 
-import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Typeface
 import android.opengl.GLSurfaceView
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -215,7 +217,6 @@ class MainActivity : AppCompatActivity() {
 
         Thread {
             try {
-                // First check basic Vulkan support via PackageManager (fast, safe)
                 val basicSupport = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                     packageManager.hasSystemFeature(PackageManager.FEATURE_VULKAN_HARDWARE_LEVEL)
                 } else false
@@ -224,13 +225,12 @@ class MainActivity : AppCompatActivity() {
                     packageManager.hasSystemFeature(PackageManager.FEATURE_VULKAN_HARDWARE_LEVEL, 2)
                 } else false
 
-                // Try JNI for detailed info (may crash on some devices, catch what we can)
+                var vulkanInfo: VulkanUtils.VulkanInfo? = null
                 var detailText: String
                 try {
-                    val info = VulkanUtils.getVulkanInfo()
-                    detailText = VulkanUtils.buildDetailText(info)
+                    vulkanInfo = VulkanUtils.getVulkanInfo()
+                    detailText = VulkanUtils.buildDetailText(vulkanInfo)
                 } catch (e: Exception) {
-                    // JNI failed, build basic info from PackageManager
                     val sb = StringBuilder()
                     sb.appendLine("Vulkan 基础检测结果:")
                     sb.appendLine()
@@ -246,27 +246,63 @@ class MainActivity : AppCompatActivity() {
                     detailText = sb.toString()
                 }
 
+                val finalInfo = vulkanInfo
+                val finalText = detailText
+
                 handler.post {
                     try {
                         loadingDialog.dismiss()
                     } catch (_: Exception) {}
 
                     try {
+                        val searchInput = EditText(this).apply {
+                            hint = "搜索 Vulkan 扩展..."
+                            setSingleLine()
+                            imeOptions = EditorInfo.IME_ACTION_DONE
+                            layoutParams = LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.WRAP_CONTENT
+                            ).apply { bottomMargin = dp(12) }
+                        }
+
+                        val detailTextView = TextView(this).apply {
+                            text = finalText
+                            textSize = 13f
+                            setLineSpacing(dp(4).toFloat(), 1f)
+                        }
+
                         val scrollView = ScrollView(this).apply {
-                            setPadding(dp(48), dp(32), dp(48), dp(32))
-                            addView(TextView(this@MainActivity).apply {
-                                text = detailText
-                                textSize = 13f
-                                setLineSpacing(dp(4).toFloat(), 1f)
+                            setPadding(dp(32), dp(16), dp(32), dp(16))
+                            addView(detailTextView)
+                        }
+
+                        // Search listener - only works when JNI info is available
+                        if (finalInfo != null) {
+                            searchInput.addTextChangedListener(object : TextWatcher {
+                                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                                override fun afterTextChanged(s: Editable?) {
+                                    val filter = s?.toString() ?: ""
+                                    detailTextView.text = VulkanUtils.buildDetailText(finalInfo, filter)
+                                }
                             })
                         }
 
-                        val title = if (basicSupport || detailText.contains("\"supported\":true"))
+                        val dialogLayout = LinearLayout(this).apply {
+                            orientation = LinearLayout.VERTICAL
+                            setPadding(dp(24), dp(16), dp(24), dp(16))
+                            if (finalInfo != null) {
+                                addView(searchInput)
+                            }
+                            addView(scrollView)
+                        }
+
+                        val title = if (basicSupport || finalText.contains("\"supported\":true"))
                             "Vulkan 详细信息" else "Vulkan 不可用"
 
                         MaterialAlertDialogBuilder(this@MainActivity)
                             .setTitle(title)
-                            .setView(scrollView)
+                            .setView(dialogLayout)
                             .setPositiveButton("关闭", null)
                             .show()
                     } catch (_: Exception) {}

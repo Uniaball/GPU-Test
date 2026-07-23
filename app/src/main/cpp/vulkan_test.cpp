@@ -9,6 +9,7 @@
 #include <chrono>
 #include <dlfcn.h>
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan_android.h>
 #include <android/log.h>
 
 #define LOG_TAG "VulkanTest"
@@ -97,6 +98,7 @@ DECL_FUNC(vkCreateFence);
 DECL_FUNC(vkDestroyFence);
 DECL_FUNC(vkWaitForFences);
 DECL_FUNC(vkResetFences);
+DECL_FUNC(vkResetCommandBuffer);
 DECL_FUNC(vkCmdBeginRenderPass);
 DECL_FUNC(vkCmdEndRenderPass);
 DECL_FUNC(vkCmdSetViewport);
@@ -268,6 +270,7 @@ static bool loadVulkanFunctions() {
     LOAD_FUNC(vkDestroyFence);
     LOAD_FUNC(vkWaitForFences);
     LOAD_FUNC(vkResetFences);
+    LOAD_FUNC(vkResetCommandBuffer);
     LOAD_FUNC(vkCmdBeginRenderPass);
     LOAD_FUNC(vkCmdEndRenderPass);
     LOAD_FUNC(vkCmdSetViewport);
@@ -462,12 +465,12 @@ static void createInstanceData() {
 
     srand(42);
     for (int i = 0; i < count; i++) {
-        float x = ((float)rand() / RAND_MAX - 0.5f) * 200.0f;
-        float y = ((float)rand() / RAND_MAX - 0.5f) * 200.0f;
-        float z = ((float)rand() / RAND_MAX - 0.5f) * 200.0f;
-        float speed = 0.1f + (float)rand() / RAND_MAX * 0.4f;
-        float rotationSpeed = 0.5f + (float)rand() / RAND_MAX * 1.0f;
-        float offset = (float)rand() / RAND_MAX * 10.0f;
+        float x = ((float)rand() / (float)RAND_MAX - 0.5f) * 200.0f;
+        float y = ((float)rand() / (float)RAND_MAX - 0.5f) * 200.0f;
+        float z = ((float)rand() / (float)RAND_MAX - 0.5f) * 200.0f;
+        float speed = 0.1f + (float)rand() / (float)RAND_MAX * 0.4f;
+        float rotationSpeed = 0.5f + (float)rand() / (float)RAND_MAX * 1.0f;
+        float offset = (float)rand() / (float)RAND_MAX * 10.0f;
 
         instanceData[i * 6 + 0] = x;
         instanceData[i * 6 + 1] = y;

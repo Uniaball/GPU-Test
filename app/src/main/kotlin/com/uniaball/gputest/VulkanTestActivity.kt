@@ -68,9 +68,12 @@ class VulkanTestActivity : AppCompatActivity() {
             holder.addCallback(object : SurfaceHolder.Callback {
                 override fun surfaceCreated(holder: SurfaceHolder) {
                     surfaceReady = true
-                    startRendering()
                 }
-                override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
+                override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+                    if (width > 0 && height > 0 && surfaceReady && !isRendering) {
+                        startRendering(width, height)
+                    }
+                }
                 override fun surfaceDestroyed(holder: SurfaceHolder) {
                     surfaceReady = false
                     stopRendering()
@@ -210,7 +213,7 @@ class VulkanTestActivity : AppCompatActivity() {
         }
     }
 
-    private fun startRendering() {
+    private fun startRendering(width: Int, height: Int) {
         if (isRendering) return
         isRendering = true
 
@@ -218,7 +221,7 @@ class VulkanTestActivity : AppCompatActivity() {
             val holder = surfaceView?.holder ?: return@Thread
             val surface = holder.surface ?: return@Thread
 
-            if (!VulkanTestUtils.init(surface, surfaceView!!.width, surfaceView!!.height, sphereCount)) {
+            if (!VulkanTestUtils.init(surface, width, height, sphereCount)) {
                 runOnUiThread {
                     Toast.makeText(this@VulkanTestActivity, "Vulkan 初始化失败", Toast.LENGTH_LONG).show()
                     finish()
@@ -329,8 +332,10 @@ class VulkanTestActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (surfaceReady && !isRendering) {
-            startRendering()
+        val w = surfaceView?.width ?: 0
+        val h = surfaceView?.height ?: 0
+        if (surfaceReady && !isRendering && w > 0 && h > 0) {
+            startRendering(w, h)
         }
     }
 

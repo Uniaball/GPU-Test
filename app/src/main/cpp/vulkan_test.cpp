@@ -1134,10 +1134,9 @@ static bool initVulkan(ANativeWindow* window, int width, int height, int sphereC
     }
 
     char apiVerStr[32];
-    snprintf(apiVerStr, sizeof(apiVerStr), "%u.%u.%u",
+    snprintf(apiVerStr, sizeof(apiVerStr), "%u.%u",
              VK_API_VERSION_MAJOR(apiVersion),
-             VK_API_VERSION_MINOR(apiVersion),
-             VK_API_VERSION_PATCH(apiVersion));
+             VK_API_VERSION_MINOR(apiVersion));
     g_state.apiVersion = apiVerStr;
     LOGI("Using Vulkan API version: %s", apiVerStr);
 

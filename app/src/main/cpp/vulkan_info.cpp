@@ -63,10 +63,9 @@ static std::string escapeJson(const std::string& s) {
 
 static std::string apiVersionStr(uint32_t version) {
     char buf[32];
-    snprintf(buf, sizeof(buf), "%u.%u.%u",
+    snprintf(buf, sizeof(buf), "%u.%u",
              VK_API_VERSION_MAJOR(version),
-             VK_API_VERSION_MINOR(version),
-             VK_API_VERSION_PATCH(version));
+             VK_API_VERSION_MINOR(version));
     return std::string(buf);
 }
 

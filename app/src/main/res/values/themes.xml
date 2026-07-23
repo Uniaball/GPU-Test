@@ -1,4 +1,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Material 3 主题 -->
-    <style name="Theme.GPUTest" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar" />
+    <!-- Material 3 主题 with edge-to-edge support -->
+    <style name="Theme.GPUTest" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
 </resources>

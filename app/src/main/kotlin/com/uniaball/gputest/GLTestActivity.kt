@@ -13,7 +13,11 @@ import android.view.animation.AlphaAnimation
 import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
 import com.google.android.material.card.MaterialCardView
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -46,7 +50,11 @@ class GLTestActivity : AppCompatActivity() {
     private var sphereCount: Int = 0
     private var sphereRenderer: SphereRenderer? = null
 
+    private val Int.dpToPx: Int
+        get() = (this * resources.displayMetrics.density).toInt()
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_gltest)
 
@@ -57,6 +65,27 @@ class GLTestActivity : AppCompatActivity() {
         infoTextView = findViewById(R.id.infoTextView)
         performanceTextView = findViewById(R.id.performanceTextView)
         performanceCardView = findViewById(R.id.performanceCardView)
+
+        // Adjust overlay card margins to account for system bar insets
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.fpsCardView)) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updateLayoutParams<FrameLayout.LayoutParams> {
+                topMargin = systemBars.top + 16.dpToPx
+                leftMargin = 16.dpToPx
+                rightMargin = 16.dpToPx
+            }
+            insets
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.performanceCardView)) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updateLayoutParams<FrameLayout.LayoutParams> {
+                bottomMargin = systemBars.bottom + 16.dpToPx
+                leftMargin = 16.dpToPx
+                rightMargin = 16.dpToPx
+            }
+            insets
+        }
 
         sphereCount = SettingsActivity.getSphereCount(this)
 

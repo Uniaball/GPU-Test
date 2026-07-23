@@ -100,6 +100,18 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { startGLTest() }
         }
 
+        // Vulkan test button (outlined)
+        val vulkanTestBtn = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            id = View.generateViewId()
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(16) }
+            text = getString(R.string.vulkan_test_btn)
+            icon = getDrawable(R.drawable.ic_vulkan)
+            setOnClickListener { startVulkanTest() }
+        }
+
         // Vulkan detect button (outlined)
         val vulkanDetectBtn = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             id = View.generateViewId()
@@ -108,7 +120,7 @@ class MainActivity : AppCompatActivity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { topMargin = dp(16) }
             text = getString(R.string.vulkan_detect_btn)
-            icon = getDrawable(R.drawable.ic_vulkan)
+            icon = getDrawable(R.drawable.ic_timer)
             setOnClickListener { showVulkanDetail() }
         }
 
@@ -134,6 +146,7 @@ class MainActivity : AppCompatActivity() {
             setPadding(dp(24), dp(16), dp(24), dp(24))
             addView(infoCard)
             addView(glTestBtn)
+            addView(vulkanTestBtn)
             addView(vulkanDetectBtn)
             addView(footer)
         }
@@ -200,6 +213,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun startGLTest() {
         startActivity(Intent(this, GLTestActivity::class.java))
+    }
+
+    private fun startVulkanTest() {
+        startActivity(Intent(this, VulkanTestActivity::class.java))
     }
 
     private fun showVulkanDetail() {

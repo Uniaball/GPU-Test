@@ -5,6 +5,7 @@
     <string name="countdown_ready">准备开始测试...</string>
     <string name="app_name">GPU Test</string>
     <string name="gl_test_btn">OpenGL ES测试</string>
+    <string name="vulkan_test_btn">Vulkan 性能测试</string>
     <string name="vulkan_detect_btn">检测 Vulkan 支持</string>
     <string name="version_info">Version 1.5.2 | Made by Uniaball</string>
     

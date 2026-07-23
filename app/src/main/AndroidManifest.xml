@@ -26,6 +26,11 @@
             android:name=".GLTestActivity"
             android:theme="@style/Theme.GPUTest"
             android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".VulkanTestActivity"
+            android:theme="@style/Theme.GPUTest"
+            android:screenOrientation="portrait" />
             
         <activity
             android:name=".SettingsActivity"

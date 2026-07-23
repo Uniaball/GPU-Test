@@ -35,6 +35,7 @@ DECL_FUNC(vkGetPhysicalDeviceProperties);
 DECL_FUNC(vkGetPhysicalDeviceFeatures);
 DECL_FUNC(vkGetPhysicalDeviceQueueFamilyProperties);
 DECL_FUNC(vkGetPhysicalDeviceMemoryProperties);
+DECL_FUNC(vkGetPhysicalDeviceFormatProperties);
 DECL_FUNC(vkCreateDevice);
 DECL_FUNC(vkDestroyDevice);
 DECL_FUNC(vkGetDeviceQueue);
@@ -126,6 +127,7 @@ struct VulkanState {
     std::vector<VkImage> swapchainImages;
     std::vector<VkImageView> swapchainImageViews;
     VkFormat swapchainFormat = VK_FORMAT_UNDEFINED;
+    VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
     VkExtent2D swapchainExtent = {0, 0};
 
     VkImage depthImage = VK_NULL_HANDLE;
@@ -146,6 +148,8 @@ struct VulkanState {
 
     VkBuffer vertexBuffer = VK_NULL_HANDLE;
     VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;
+    VkBuffer normalBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory normalBufferMemory = VK_NULL_HANDLE;
     VkBuffer indexBuffer = VK_NULL_HANDLE;
     VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;
     VkBuffer instanceBuffer = VK_NULL_HANDLE;
@@ -217,6 +221,7 @@ static bool loadVulkanFunctions() {
     LOAD_FUNC(vkGetPhysicalDeviceFeatures);
     LOAD_FUNC(vkGetPhysicalDeviceQueueFamilyProperties);
     LOAD_FUNC(vkGetPhysicalDeviceMemoryProperties);
+    LOAD_FUNC(vkGetPhysicalDeviceFormatProperties);
     LOAD_FUNC(vkCreateDevice);
     LOAD_FUNC(vkDestroyDevice);
     LOAD_FUNC(vkGetDeviceQueue);
@@ -455,6 +460,28 @@ static void createSphereGeometry(float radius, int segments) {
                  g_state.indexBuffer, g_state.indexBufferMemory);
 
     copyBuffer(vertexStaging, g_state.vertexBuffer, vertexSize);
+
+    // Normal buffer (device-local)
+    createBuffer(vertexSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                 g_state.normalBuffer, g_state.normalBufferMemory);
+
+    // Staging for normals
+    VkBuffer normalStaging;
+    VkDeviceMemory normalStagingMem;
+    createBuffer(vertexSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                 normalStaging, normalStagingMem);
+
+    pvkMapMemory(g_state.device, normalStagingMem, 0, vertexSize, 0, &data);
+    memcpy(data, normals.data(), vertexSize);
+    pvkUnmapMemory(g_state.device, normalStagingMem);
+
+    copyBuffer(normalStaging, g_state.normalBuffer, vertexSize);
+
+    pvkDestroyBuffer(g_state.device, normalStaging, nullptr);
+    pvkFreeMemory(g_state.device, normalStagingMem, nullptr);
+
     copyBuffer(indexStaging, g_state.indexBuffer, indexSize);
 
     pvkDestroyBuffer(g_state.device, vertexStaging, nullptr);
@@ -567,7 +594,7 @@ static void updateUniformBuffer(float time) {
     float f = 1.0f / tan(fov / 2.0f);
     float proj[16] = {
         f/aspect, 0, 0, 0,
-        0, f, 0, 0,
+        0, -f, 0, 0,
         0, 0, far/(near-far), -1,
         0, 0, (far*near)/(near-far), 0
     };
@@ -685,8 +712,35 @@ static void createDescriptorSet() {
 // ============================================================================
 // Render pass
 // ============================================================================
+static VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates,
+                                    VkImageTiling tiling,
+                                    VkFormatFeatureFlags features) {
+    for (VkFormat format : candidates) {
+        VkFormatProperties props;
+        pvkGetPhysicalDeviceFormatProperties(g_state.physicalDevice, format, &props);
+
+        if (tiling == VK_IMAGE_TILING_LINEAR &&
+            (props.linearTilingFeatures & features) == features) {
+            return format;
+        } else if (tiling == VK_IMAGE_TILING_OPTIMAL &&
+                   (props.optimalTilingFeatures & features) == features) {
+            return format;
+        }
+    }
+    LOGE("Failed to find supported format!");
+    return VK_FORMAT_UNDEFINED;
+}
+
+static VkFormat findDepthFormat() {
+    return findSupportedFormat(
+        {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D16_UNORM},
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+    );
+}
+
 static void createDepthResources() {
-    VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
+    VkFormat depthFormat = g_state.depthFormat;
 
     VkImageCreateInfo imageInfo = {};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -752,7 +806,7 @@ static void createRenderPass() {
     colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
     VkAttachmentDescription depthAttachment = {};
-    depthAttachment.format = VK_FORMAT_D32_SFLOAT;
+    depthAttachment.format = g_state.depthFormat;
     depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -1033,7 +1087,7 @@ static void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageInd
     renderPassInfo.renderArea.extent = g_state.swapchainExtent;
 
     VkClearValue clearValues[2] = {};
-    clearValues[0].color = {{0.05f, 0.05f, 0.1f, 1.0f}};
+    clearValues[0].color = {{0.1f, 0.15f, 0.2f, 1.0f}};
     clearValues[1].depthStencil = {1.0f, 0};
     renderPassInfo.clearValueCount = 2;
     renderPassInfo.pClearValues = clearValues;
@@ -1042,7 +1096,7 @@ static void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageInd
 
     pvkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, g_state.graphicsPipeline);
 
-    VkBuffer vertexBuffers[] = { g_state.vertexBuffer, g_state.vertexBuffer, g_state.instanceBuffer };
+    VkBuffer vertexBuffers[] = { g_state.vertexBuffer, g_state.normalBuffer, g_state.instanceBuffer };
     VkDeviceSize offsets[] = { 0, 0, 0 };
     pvkCmdBindVertexBuffers(commandBuffer, 0, 3, vertexBuffers, offsets);
 
@@ -1102,11 +1156,13 @@ static void createSwapchain() {
 
     VkSurfaceFormatKHR surfaceFormat = formats[0];
     for (const auto& f : formats) {
-        if (f.format == VK_FORMAT_B8G8R8A8_SRGB && f.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+        if ((f.format == VK_FORMAT_B8G8R8A8_SRGB || f.format == VK_FORMAT_R8G8B8A8_SRGB) &&
+            f.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
             surfaceFormat = f;
             break;
         }
     }
+    // If no SRGB format found, surfaceFormat remains formats[0] (already set above)
 
     uint32_t presentModeCount;
     pvkGetPhysicalDeviceSurfacePresentModesKHR(g_state.physicalDevice, g_state.surface,
@@ -1177,6 +1233,50 @@ static void createSwapchain() {
     }
 
     LOGI("Swapchain created: %dx%d, %d images", extent.width, extent.height, imageCount);
+}
+
+// ============================================================================
+// Swapchain recreation
+// ============================================================================
+static void cleanupSwapchain() {
+    for (auto fb : g_state.framebuffers) pvkDestroyFramebuffer(g_state.device, fb, nullptr);
+    g_state.framebuffers.clear();
+
+    for (auto iv : g_state.swapchainImageViews) pvkDestroyImageView(g_state.device, iv, nullptr);
+    g_state.swapchainImageViews.clear();
+
+    pvkDestroyImageView(g_state.device, g_state.depthImageView, nullptr);
+    g_state.depthImageView = VK_NULL_HANDLE;
+    pvkDestroyImage(g_state.device, g_state.depthImage, nullptr);
+    g_state.depthImage = VK_NULL_HANDLE;
+    pvkFreeMemory(g_state.device, g_state.depthImageMemory, nullptr);
+    g_state.depthImageMemory = VK_NULL_HANDLE;
+
+    pvkDestroySwapchainKHR(g_state.device, g_state.swapchain, nullptr);
+    g_state.swapchain = VK_NULL_HANDLE;
+}
+
+static void recreateSwapchain() {
+    pvkDeviceWaitIdle(g_state.device);
+
+    cleanupSwapchain();
+
+    createSwapchain();
+    createDepthResources();
+    createFramebuffers();
+
+    // Free old command buffers and reallocate
+    pvkFreeCommandBuffers(g_state.device, g_state.commandPool,
+                          (uint32_t)g_state.commandBuffers.size(),
+                          g_state.commandBuffers.data());
+
+    g_state.commandBuffers.resize(g_state.framebuffers.size());
+    VkCommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = g_state.commandPool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = (uint32_t)g_state.commandBuffers.size();
+    pvkAllocateCommandBuffers(g_state.device, &allocInfo, g_state.commandBuffers.data());
 }
 
 // ============================================================================
@@ -1280,6 +1380,13 @@ static bool initVulkan(ANativeWindow* window, int width, int height, int sphereC
     pvkGetPhysicalDeviceProperties(g_state.physicalDevice, &deviceProps);
     g_state.deviceName = deviceProps.deviceName;
     LOGI("Selected GPU: %s", deviceProps.deviceName);
+
+    g_state.depthFormat = findDepthFormat();
+    if (g_state.depthFormat == VK_FORMAT_UNDEFINED) {
+        LOGE("Failed to find supported depth format");
+        return false;
+    }
+    LOGI("Selected depth format: %d", g_state.depthFormat);
 
     // Find queue families
     uint32_t queueFamilyCount = 0;
@@ -1398,10 +1505,14 @@ static void drawFrame() {
                                                g_state.imageAvailableSemaphore,
                                                VK_NULL_HANDLE, &imageIndex);
 
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        recreateSwapchain();
         return;
     }
-    if (result != VK_SUCCESS) {
+    if (result == VK_SUBOPTIMAL_KHR) {
+        // Continue rendering this frame, recreate next time
+    }
+    if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         LOGE("Failed to acquire swapchain image: %d", result);
         return;
     }
@@ -1442,7 +1553,10 @@ static void drawFrame() {
     presentInfo.pSwapchains = &g_state.swapchain;
     presentInfo.pImageIndices = &imageIndex;
 
-    pvkQueuePresentKHR(g_state.presentQueue, &presentInfo);
+    result = pvkQueuePresentKHR(g_state.presentQueue, &presentInfo);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        recreateSwapchain();
+    }
 
     // FPS tracking
     g_state.frameCount++;
@@ -1490,6 +1604,8 @@ void VulkanState::cleanup() {
         pvkFreeMemory(device, uniformBufferMemory, nullptr);
         pvkDestroyBuffer(device, vertexBuffer, nullptr);
         pvkFreeMemory(device, vertexBufferMemory, nullptr);
+        pvkDestroyBuffer(device, normalBuffer, nullptr);
+        pvkFreeMemory(device, normalBufferMemory, nullptr);
         pvkDestroyBuffer(device, indexBuffer, nullptr);
         pvkFreeMemory(device, indexBufferMemory, nullptr);
         pvkDestroyBuffer(device, instanceBuffer, nullptr);
